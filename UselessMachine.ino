@@ -5,19 +5,20 @@
 
 #include <Servo.h>
 #include <Gaussian.h>
-#define PinoBotao 8 //Pino do botão
-#define PinoServo 3 //Pino do motor
-#define espiar 170 //Posição do servo para Espiar
-#define ameacar 56 //Posição do servo para Ameaçar
-#define pressionar 10 //Posição do servo para Pressionar o botão
-#define dormir 180  //Posição do servo para Dormir
+#define PinoBotao 8         //Pino do botão
+#define PinoServo 3         //Pino do motor
+#define PinoLigaDesliga 13  //Pino do motor
+#define espiar 170          //Posição do servo para Espiar
+#define ameacar 56          //Posição do servo para Ameaçar
+#define pressionar 10       //Posição do servo para Pressionar o botão
+#define dormir 180          //Posição do servo para Dormir
 //Essas posições do servo podem mudar dependendo de como for a montagem da maquininha.
 //Faça os ajustes conforme necessário
 
 Servo servo;  //Cria o objeto Servo (motor)z
 
-int maquina = 0; //Estado da Máquina
-int botao; //Estado do botão
+int maquina = 0;  //Estado da Máquina
+int botao;        //Estado do botão
 
 /* ___Time = tempo desde que começou esse estado ___
    ___Base = tempo médio que deve ficar no estado ___
@@ -37,56 +38,61 @@ unsigned int ignorarBase = 1000;
 unsigned int ignorarPeriod = ignorarBase;
 unsigned int reboteBase = 800;
 unsigned int rebotePeriod = reboteBase;
-unsigned int pressionarChance = 650; // Qual a chance em 1000 da máquina querer apertar o botão
-unsigned int ameacarChance = 850; // Qual a chance da máquina querer ameaçar apertar o botão
-unsigned int reboteChance = 666; // Qual a chance em 1000 da máquina querer dar um rebote (apertar o botão após ameaçar)
+unsigned int pressionarChance = 650;  // Qual a chance em 1000 da máquina querer apertar o botão
+unsigned int ameacarChance = 850;     // Qual a chance da máquina querer ameaçar apertar o botão
+unsigned int reboteChance = 666;      // Qual a chance em 1000 da máquina querer dar um rebote (apertar o botão após ameaçar)
 
-float mean = 1; // valor médio da distribuição normal
-float variance = 0.8; // variância da distribuição normal (mede quão espaçada é a distribuição)
+float mean = 1;        // valor médio da distribuição normal
+float variance = 0.8;  // variância da distribuição normal (mede quão espaçada é a distribuição)
 Gaussian bellDistr = Gaussian(mean, variance);
 
 void setup() {
-  Serial.begin(9600); // prepara a porta serial
-  randomSeed(analogRead(A0)); // gera uma semente para os números aleatórios
+  Serial.begin(9600);          // prepara a porta serial
+  randomSeed(analogRead(A0));  // gera uma semente para os números aleatórios
   //randomSeed(42);
 
-  servo.attach(PinoServo); //configura o servo
-  pinMode(PinoBotao, INPUT_PULLUP); //configura o botão
+  servo.attach(PinoServo);                 //configura o servo
+  pinMode(PinoBotao, INPUT_PULLUP);        //configura o botão
+  pinMode(PinoLigaDesliga, INPUT_PULLUP);  //configura o botão
   attachInterrupt(digitalPinToInterrupt(PinoBotao), Click, HIGH);
   servo.write(dormir);
 }
 
-void loop() { // rotina padrão
-  botao = digitalRead(PinoBotao); // lê o estado do botão
-  switch (maquina) { // direciona para a ação atual da máquina
-    /* 0 = Dormindo
-       1 = Pressionando
-       2 = Ameaçando
-       3 = Espiando
-       4 = Blefando
-    */
-    case 1:
-      Pressionar();
-      break;
-    case 2:
-      Ameacar();
-      break;
-    case 3:
-      Ignorar();
-      break;
-    case 4:
-      Espiar();
-      break;
+void loop() {  // rotina padrão
+  if (digitalRead(PinoLigaDesliga) == LOW) {
+    botao = digitalRead(PinoBotao);  // lê o estado do botão
+    switch (maquina) {               // direciona para a ação atual da máquina
+      /* 0 = Dormindo
+        1 = Pressionando
+        2 = Ameaçando
+        3 = Espiando
+        4 = Blefando
+      */
+      case 1:
+        Pressionar();
+        break;
+      case 2:
+        Ameacar();
+        break;
+      case 3:
+        Ignorar();
+        break;
+      case 4:
+        Espiar();
+        break;
 
-    default: // por padrão dorme
-      Dormir();
-      break;
+      default:  // por padrão dorme
+        Dormir();
+        break;
+    }
+  } else {  //  Botão de desliga ativado
+    delay(1000);
   }
 }
 
-void Click() { //Quando a máquina percebe que alguém apertou o botão
+void Click() {  //Quando a máquina percebe que alguém apertou o botão
   Serial.println("click");
-  int vontade = random(1001); //gera aleatoriamente a vontade da máquina
+  int vontade = random(1001);  //gera aleatoriamente a vontade da máquina
   if (vontade < pressionarChance) {
     vouPressionar();
   } else if (vontade < ameacarChance) {
@@ -127,7 +133,7 @@ void Ameacar() {
     servo.write(ameacar);
     if ((unsigned long)(millis() - ameacarTime) > ameacarPeriod) {
       int rand = random(1001);
-      if (rand > reboteChance) { // Rebotar
+      if (rand > reboteChance) {  // Rebotar
         vouDormir();
       } else {
         vouPressionar();
